@@ -5,6 +5,7 @@
  * @copyright Copyright &copy; Kartik Visweswaran, Krajee.com, 2018 - 2019
  * @version   1.0.0
  */
+
 namespace kartik\filesystem;
 
 use finfo;
@@ -65,8 +66,8 @@ class File
      * Constructor
      *
      * @param string $path Path to file
-     * @param bool $create Create file if it does not exist (if true)
-     * @param int $mode Mode to apply to the folder holding the file
+     * @param bool   $create Create file if it does not exist (if true)
+     * @param int    $mode Mode to apply to the folder holding the file
      */
     public function __construct($path, $create = false, $mode = 0755)
     {
@@ -77,6 +78,54 @@ class File
         }
         $this->pwd();
         $create && !$this->exists() && $this->safe($path) && $this->create();
+    }
+
+    /**
+     * Prepares an ASCII string for writing. Converts line endings to the
+     * correct terminator for the current platform. If Windows, "\r\n" will be used,
+     * all other platforms will use "\n"
+     *
+     * @param string $data Data to prepare for writing.
+     * @param bool   $forceWindows If true forces Windows new line string.
+     *
+     * @return string The with converted line endings.
+     */
+    public static function prepare($data, $forceWindows = false)
+    {
+        $lineBreak = "\n";
+        if (DIRECTORY_SEPARATOR === '\\' || $forceWindows === true) {
+            $lineBreak = "\r\n";
+        }
+
+        return strtr($data, ["\r\n" => $lineBreak, "\n" => $lineBreak, "\r" => $lineBreak]);
+    }
+
+    /**
+     * Returns the file basename. simulate the php basename() for multibyte (mb_basename).
+     *
+     * @param string      $path Path to file
+     * @param string|null $ext The name of the extension
+     *
+     * @return string the file basename.
+     */
+    protected static function basename($path, $ext = null)
+    {
+        // check for multibyte string and use basename() if not found
+        if (mb_strlen($path) === strlen($path)) {
+            return ($ext === null) ? basename($path) : basename($path, $ext);
+        }
+
+        $splInfo = new SplFileInfo($path);
+        $name = ltrim($splInfo->getFilename(), '/\\');
+
+        if ($ext === null || $ext === '') {
+            return $name;
+        }
+        $ext = preg_quote($ext);
+        $new = preg_replace("/({$ext})$/u", "", $name);
+
+        // basename of '/etc/.d' is '.d' not ''
+        return ($new === '') ? $name : $new;
     }
 
     /**
@@ -109,7 +158,8 @@ class File
      * Opens the current file with a given $mode
      *
      * @param string $mode A valid 'fopen' mode string (r|w|a ...)
-     * @param bool $force If true then the file will be re-opened even if its already opened, otherwise it won't
+     * @param bool   $force If true then the file will be re-opened even if its already opened, otherwise it won't
+     *
      * @return bool True on success, false on failure
      */
     public function open($mode = 'r', $force = false)
@@ -130,8 +180,9 @@ class File
      * Return the contents of this file as a string.
      *
      * @param string|bool $bytes where to start
-     * @param string $mode A `fread` compatible mode.
-     * @param bool $force If true then the file will be re-opened even if its already opened, otherwise it won't
+     * @param string      $mode A `fread` compatible mode.
+     * @param bool        $force If true then the file will be re-opened even if its already opened, otherwise it won't
+     *
      * @return string|false string on success, false on failure
      */
     public function read($bytes = false, $mode = 'rb', $force = false)
@@ -168,7 +219,8 @@ class File
      * Sets or gets the offset for the currently opened file.
      *
      * @param int|bool $offset The $offset in bytes to seek. If set to false then the current offset is returned.
-     * @param int $seek PHP Constant SEEK_SET | SEEK_CUR | SEEK_END determining what the $offset is relative to
+     * @param int      $seek PHP Constant SEEK_SET | SEEK_CUR | SEEK_END determining what the $offset is relative to
+     *
      * @return int|bool True on success, false on failure (set mode), false on failure or integer offset on success (get mode)
      */
     public function offset($offset = false, $seek = SEEK_SET)
@@ -185,30 +237,12 @@ class File
     }
 
     /**
-     * Prepares an ASCII string for writing. Converts line endings to the
-     * correct terminator for the current platform. If Windows, "\r\n" will be used,
-     * all other platforms will use "\n"
-     *
-     * @param string $data Data to prepare for writing.
-     * @param bool $forceWindows If true forces Windows new line string.
-     * @return string The with converted line endings.
-     */
-    public static function prepare($data, $forceWindows = false)
-    {
-        $lineBreak = "\n";
-        if (DIRECTORY_SEPARATOR === '\\' || $forceWindows === true) {
-            $lineBreak = "\r\n";
-        }
-
-        return strtr($data, ["\r\n" => $lineBreak, "\n" => $lineBreak, "\r" => $lineBreak]);
-    }
-
-    /**
      * Write given data to this file.
      *
      * @param string $data Data to write to this File.
      * @param string $mode Mode of writing. {@link https://secure.php.net/fwrite See fwrite()}.
-     * @param bool $force Force the file to open
+     * @param bool   $force Force the file to open
+     *
      * @return bool Success
      */
     public function write($data, $mode = 'w', $force = false)
@@ -234,7 +268,8 @@ class File
      * Append given data string to this file.
      *
      * @param string $data Data to write
-     * @param bool $force Force the file to open
+     * @param bool   $force Force the file to open
+     *
      * @return bool Success
      */
     public function append($data, $force = false)
@@ -332,7 +367,7 @@ class File
             $this->info();
         }
         if (isset($this->info['extension'])) {
-            return static::_basename($this->name, '.' . $this->info['extension']);
+            return static::basename($this->name, '.' . $this->info['extension']);
         }
         if ($this->name) {
             return $this->name;
@@ -342,37 +377,11 @@ class File
     }
 
     /**
-     * Returns the file basename. simulate the php basename() for multibyte (mb_basename).
-     *
-     * @param string $path Path to file
-     * @param string|null $ext The name of the extension
-     * @return string the file basename.
-     */
-    protected static function _basename($path, $ext = null)
-    {
-        // check for multibyte string and use basename() if not found
-        if (mb_strlen($path) === strlen($path)) {
-            return ($ext === null) ? basename($path) : basename($path, $ext);
-        }
-
-        $splInfo = new SplFileInfo($path);
-        $name = ltrim($splInfo->getFilename(), '/\\');
-
-        if ($ext === null || $ext === '') {
-            return $name;
-        }
-        $ext = preg_quote($ext);
-        $new = preg_replace("/({$ext})$/u", "", $name);
-
-        // basename of '/etc/.d' is '.d' not ''
-        return ($new === '') ? $name : $new;
-    }
-
-    /**
      * Makes file name safe for saving
      *
      * @param string|null $name The name of the file to make safe if different from $this->name
      * @param string|null $ext The name of the extension to make safe if different from $this->ext
+     *
      * @return string The extension of the file
      */
     public function safe($name = null, $ext = null)
@@ -384,13 +393,14 @@ class File
             $ext = $this->ext();
         }
 
-        return preg_replace("/(?:[^\w\.-]+)/", '_', static::_basename($name, $ext));
+        return preg_replace('/(?:[^\w\.-]+)/', '_', static::basename($name, $ext));
     }
 
     /**
      * Get md5 Checksum of file with previous check of Filesize
      *
      * @param int|bool $maxsize in MB or true to force
+     *
      * @return string|false md5 Checksum {@link https://secure.php.net/md5_file See md5_file()}, or false in case of an error
      */
     public function md5($maxsize = 5)
@@ -551,20 +561,11 @@ class File
     }
 
     /**
-     * Returns the current folder.
-     *
-     * @return \Cake\Filesystem\Folder Current folder
-     */
-    public function folder()
-    {
-        return $this->folder;
-    }
-
-    /**
      * Copy the File to $dest
      *
      * @param string $dest Destination for the copy
-     * @param bool $overwrite Overwrite $dest if exists
+     * @param bool   $overwrite Overwrite $dest if exists
+     *
      * @return bool Success
      */
     public function copy($dest, $overwrite = true)
@@ -609,6 +610,7 @@ class File
      *
      * @param bool $all Clear all cache or not. Passing false will clear
      *   the stat cache for the current path only.
+     *
      * @return void
      */
     public function clearStatCache($all = false)
@@ -625,6 +627,7 @@ class File
      *
      * @param string|array $search Text(s) to search for.
      * @param string|array $replace Text(s) to replace with.
+     *
      * @return bool Success
      */
     public function replaceText($search, $replace)

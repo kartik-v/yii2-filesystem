@@ -8,7 +8,8 @@ yii2-filesystem
 [![Monthly Downloads](https://poser.pugx.org/kartik-v/yii2-filesystem/d/monthly)](https://packagist.org/packages/kartik-v/yii2-filesystem)
 [![Daily Downloads](https://poser.pugx.org/kartik-v/yii2-filesystem/d/daily)](https://packagist.org/packages/kartik-v/yii2-filesystem)
 
-File system utilities for managing files and folders including reading, writing and appending to files.
+File system utilities for managing files and folders including reading, writing and appending to files. It also includes a `Resumable` component
+that provides an object oriented backend to manage resumable and chunk file uploads via resumable.js.
 
 ### Install
 

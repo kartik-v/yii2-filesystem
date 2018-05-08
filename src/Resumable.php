@@ -25,7 +25,7 @@ class Resumable extends Component
     const WITHOUT_EXTENSION = true;
 
     /**
-     * @var boolean whether to enable debug mode and logging
+     * @var bool whether to enable debug mode and logging
      */
     public $debug = false;
 
@@ -40,7 +40,7 @@ class Resumable extends Component
     public $uploadFolder = '@web/uploads';
 
     /**
-     * @var boolean whether to delete the temporary folder after processing
+     * @var bool whether to delete the temporary folder after processing
      */
     public $deleteTmpFolder = true;
 
@@ -85,7 +85,7 @@ class Resumable extends Component
     protected $_originalFilename;
 
     /**
-     * @var boolean whether upload is complete
+     * @var bool whether upload is complete
      */
     protected $_isUploadComplete = false;
 
@@ -101,11 +101,11 @@ class Resumable extends Component
     ];
 
     /**
-     * Resumable constructor.
+     * Resumable constructor
      *
-     * @param Request|null  $request the web request object instance
+     * @param Request|null  $request  the web request object instance
      * @param Response|null $response the web response object instance
-     * @param array         $config name-value pairs that will be used to initialize the object properties
+     * @param array         $config   name-value pairs that will be used to initialize the object properties
      */
     public function __construct($request = null, $response = null, $config = [])
     {
@@ -148,6 +148,14 @@ class Resumable extends Component
     public function init()
     {
         parent::init();
+        $this->prepare();
+    }
+
+    /**
+     * Prepare properties for the resumable upload
+     */
+    public function prepare()
+    {
         $this->tempFolder = Yii::getAlias($this->tempFolder);
         $this->uploadFolder = Yii::getAlias($this->uploadFolder);
         if (!empty($this->getResumableParams()) && !empty($this->getRequestFile())) {
@@ -199,7 +207,7 @@ class Resumable extends Component
     /**
      * Whether upload is complete
      *
-     * @return boolean
+     * @return bool
      */
     public function getIsUploadComplete()
     {
@@ -229,7 +237,7 @@ class Resumable extends Component
     /**
      * Get final filename.
      *
-     * @param boolean $withoutExtension whether to get name without extension
+     * @param bool $withoutExtension whether to get name without extension
      *
      * @return string final filename
      */
@@ -277,7 +285,7 @@ class Resumable extends Component
      *
      * @param string $name the file name
      *
-     * @return boolean|resource
+     * @return bool|resource
      */
     public function getExclusiveFileHandle($name)
     {
@@ -294,9 +302,9 @@ class Resumable extends Component
      */
     public function handleTestChunk()
     {
-        $identifier = $this->resumableParam($this->_resumableOption['identifier']);
-        $filename = $this->resumableParam($this->_resumableOption['filename']);
-        $chunkNumber = $this->resumableParam($this->_resumableOption['chunkNumber']);
+        $identifier = $this->getOption('identifier');
+        $filename = $this->getOption('filename');
+        $chunkNumber = $this->getOption('chunkNumber');
         if (!$this->isChunkUploaded($identifier, $filename, $chunkNumber)) {
             $this->_response->statusCode = 204;
         } else {
@@ -310,14 +318,17 @@ class Resumable extends Component
     public function handleChunk()
     {
         $file = $this->getRequestFile();
-        $identifier = $this->resumableParam($this->_resumableOption['identifier']);
-        $filename = $this->resumableParam($this->_resumableOption['filename']);
-        $chunkNumber = $this->resumableParam($this->_resumableOption['chunkNumber']);
-        $chunkSize = $this->resumableParam($this->_resumableOption['chunkSize']);
-        $totalSize = $this->resumableParam($this->_resumableOption['totalSize']);
+        $identifier = $this->getOption('identifier');
+        $filename = $this->getOption('filename');
+        $chunkNumber = $this->getOption('chunkNumber');
+        $chunkSize = $this->getOption('chunkSize');
+        $totalSize = $this->getOption('totalSize');
         if (!$this->isChunkUploaded($identifier, $filename, $chunkNumber)) {
             $chunkFile = $this->getChunkFile($identifier, $filename, $chunkNumber);
-            $this->moveUploadedFile($file['tmp_name'], $chunkFile);
+            if (!$this->moveUploadedFile($file['tmp_name'], $chunkFile)) {
+                $this->_response->setStatusCode(204, 'Could not find or move chunk file');
+                return;
+            }
         }
         if ($this->isFileUploadComplete($identifier, $filename, $chunkSize, $totalSize)) {
             $this->_isUploadComplete = true;
@@ -329,18 +340,18 @@ class Resumable extends Component
     /**
      * Check if file upload is complete
      *
-     * @return boolean
+     * @return bool
      */
 
     /**
      * Check if file upload is complete
      *
      * @param string $identifier the resumable file identifier
-     * @param string $filename the resumable file name
-     * @param double $chunkSize the resumable file chunk size
-     * @param double $totalSize the resumable file total size
+     * @param string $filename   the resumable file name
+     * @param double $chunkSize  the resumable file chunk size
+     * @param double $totalSize  the resumable file total size
      *
-     * @return boolean
+     * @return bool
      */
     public function isFileUploadComplete($identifier, $filename, $chunkSize, $totalSize)
     {
@@ -359,11 +370,11 @@ class Resumable extends Component
     /**
      * Check if a specific chunk is uploaded
      *
-     * @param string  $identifier the resumable file identifier
-     * @param string  $filename the resumable file name
-     * @param integer $chunkNumber the resumable file chunk number
+     * @param string $identifier  the resumable file identifier
+     * @param string $filename    the resumable file name
+     * @param int    $chunkNumber the resumable file chunk number
      *
-     * @return boolean
+     * @return bool
      */
     public function isChunkUploaded($identifier, $filename, $chunkNumber)
     {
@@ -391,8 +402,8 @@ class Resumable extends Component
     /**
      * Gets the temporary chunk file name
      *
-     * @param string  $filename the resumable file name
-     * @param integer $chunkNumber the resumable file chunk number
+     * @param string $filename    the resumable file name
+     * @param int    $chunkNumber the resumable file chunk number
      *
      * @return string
      */
@@ -405,8 +416,8 @@ class Resumable extends Component
      * Log messages with any available additional parameters when [[debug]] flag is enabled.
      *
      * @param string $message the message to be logged
-     * @param array  $params additional parameters as key value pairs to be logged
-     * @param string $type whether `info`, `warning` or `trace`
+     * @param array  $params  additional parameters as key value pairs to be logged
+     * @param string $type    whether `info`, `warning` or `trace`
      */
     public function log($message, $params = [], $type = 'info')
     {
@@ -415,7 +426,9 @@ class Resumable extends Component
         }
         $out = $message;
         if (!empty($params)) {
-            $out .= VarDumper::dumpAsString($params);
+            foreach ($params as $key => $value) {
+                $out .= "\n\t{$key}: " . VarDumper::dumpAsString($value);
+            }
         }
         if ($type === 'info') {
             Yii::info($out);
@@ -430,9 +443,9 @@ class Resumable extends Component
      * Create final file from chunks
      *
      * @param array  $chunkFiles the list of chunk files
-     * @param string $destFile the target destination file
+     * @param string $destFile   the target destination file
      *
-     * @return boolean whether file was successfully generated
+     * @return bool whether file was successfully generated
      */
     public function createFileFromChunks($chunkFiles, $destFile)
     {
@@ -444,10 +457,12 @@ class Resumable extends Component
         }
         $destFile = new File($destFile);
         $destFile->handle = $handle;
+        $i = 1;
         foreach ($chunkFiles as $chunkFile) {
             $file = new File($chunkFile);
             $destFile->append($file->read());
-            $this->log('Append ', ['chunk file' => $chunkFile]);
+            $this->log("Appending chunk # {$i}...", ['chunk file' => $chunkFile]);
+            $i++;
         }
         $this->log('End of create files from chunks');
         return $destFile->exists();
@@ -456,10 +471,10 @@ class Resumable extends Component
     /**
      * Move/rename the uploaded file
      *
-     * @param string $file the file name to move
+     * @param string $file     the file name to move
      * @param string $destFile the destination file name with target path
      *
-     * @return boolean whether movement was successful
+     * @return bool whether movement was successful
      */
     public function moveUploadedFile($file, $destFile)
     {
@@ -493,9 +508,9 @@ class Resumable extends Component
     /**
      * Gets the chunk file name
      *
-     * @param string  $identifier the resumable file identifier
-     * @param string  $filename the resumable file name
-     * @param integer $chunkNumber the resumable file chunk number
+     * @param string $identifier  the resumable file identifier
+     * @param string $filename    the resumable file name
+     * @param int    $chunkNumber the resumable file chunk number
      *
      * @return string
      */
@@ -507,7 +522,7 @@ class Resumable extends Component
     /**
      * Makes sure the original extension never gets overridden by user defined filename.
      *
-     * @param string $filename user-defined filename
+     * @param string $filename         user-defined filename
      * @param string $originalFilename original filename
      *
      * @return string filename that always has an extension from the original file
@@ -523,7 +538,7 @@ class Resumable extends Component
      * Create the file and delete temporary folder
      *
      * @param string $identifier the resumable file identifier
-     * @param string $filename the resumable file name
+     * @param string $filename   the resumable file name
      */
     protected function createFileAndDeleteTmp($identifier, $filename)
     {
@@ -556,5 +571,18 @@ class Resumable extends Component
         $resumableParams = $this->getResumableParams();
         $param = 'resumable' . ucfirst($shortName);
         return isset($resumableParams[$param]) ? $resumableParams[$param] : null;
+    }
+
+    /**
+     * Gets value of a resumable parameter from the resumable option cache
+     *
+     * @param string $param the parameter name
+     *
+     * @return string|null
+     */
+    protected function getOption($param)
+    {
+        $p = isset($this->_resumableOption[$param]) ? $this->_resumableOption[$param] : null;
+        return $p === null ? null : $this->resumableParam($p);
     }
 }

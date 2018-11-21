@@ -103,11 +103,11 @@ class Resumable extends Component
     /**
      * Resumable constructor
      *
+     * @param array         $config   name-value pairs that will be used to initialize the object properties
      * @param Request|null  $request  the web request object instance
      * @param Response|null $response the web response object instance
-     * @param array         $config   name-value pairs that will be used to initialize the object properties
      */
-    public function __construct($request = null, $response = null, $config = [])
+    public function __construct($config = [], $request = null, $response = null)
     {
         $this->_request = empty($request) ? Yii::$app->request : $request;
         $this->_response = empty($response) ? Yii::$app->response : $response;
